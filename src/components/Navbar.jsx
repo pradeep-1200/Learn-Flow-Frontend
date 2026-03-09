@@ -1,19 +1,35 @@
 import React, { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { ThemeContext } from '../context/ThemeContext';
+import { useLocation } from 'react-router-dom';
+
+const pageTitles = {
+    '/': 'Dashboard',
+    '/courses': 'Courses',
+    '/tasks': 'Tasks',
+    '/notes': 'Notes',
+    '/knowledge-graph': 'Knowledge Graph',
+    '/leetcode': 'LeetCode',
+    '/syllabus': 'Syllabus',
+    '/timetable': 'Timetable',
+    '/projects': 'Projects',
+    '/analytics': 'Analytics',
+};
 
 const Navbar = () => {
     const { user, logout } = useContext(AuthContext);
     const { theme, toggleTheme } = useContext(ThemeContext);
+    const location = useLocation();
+    const currentPage = pageTitles[location.pathname] || 'Dashboard';
 
     return (
-        <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-100 dark:border-gray-700 p-4 transition-colors duration-200">
+        <nav className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-100 dark:border-gray-700 p-4 transition-colors duration-200 shrink-0">
             <div className="flex justify-between flex-wrap items-center">
                 <div className="flex items-center space-x-2">
                     {/* Add Logo icon here if desired */}
                     <span className="font-bold text-xl text-indigo-600 dark:text-indigo-400">LearnFlow</span>
                     <span className="text-gray-400 font-medium px-2 hidden sm:inline">|</span>
-                    <span className="text-gray-800 dark:text-gray-200 font-medium hidden sm:inline hidden sm:block">Dashboard</span>
+                    <span className="text-gray-800 dark:text-gray-200 font-medium hidden sm:inline">{currentPage}</span>
                 </div>
                 
                 <div className="flex items-center space-x-4">

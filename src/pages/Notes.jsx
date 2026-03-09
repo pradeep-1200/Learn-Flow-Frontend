@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
+import { useLocation } from 'react-router-dom';
+import { ThemeContext } from '../context/ThemeContext';
 import api from '../services/api';
 import NoteEditor from '../components/NoteEditor';
 
@@ -8,11 +10,27 @@ const Notes = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [currentNote, setCurrentNote] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [backlinks, setBacklinks] = useState([]);
+  const { theme } = useContext(ThemeContext);
 
-  const fetchNotes = async () => {
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const noteTitleFromUrl = searchParams.get('note');
+
+  useEffect(() => {
+    if (noteTitleFromUrl && notes.length > 0) {
+      const foundNote = notes.find(n => n.title.toLowerCase() === noteTitleFromUrl.toLowerCase());
+      if (foundNote) {
+        handleOpenEditor(foundNote);
+      }
+    }
+  }, [noteTitleFromUrl, notes]);
+
+  const fetchNotes = async (search = '') => {
     try {
       setLoading(true);
-      const response = await api.get('/notes');
+      const url = search ? `/notes?search=${encodeURIComponent(search)}` : '/notes';
+      const response = await api.get(url);
       setNotes(response.data);
     } catch (error) {
       console.error('Error fetching notes:', error);
@@ -22,8 +40,28 @@ const Notes = () => {
   };
 
   useEffect(() => {
-    fetchNotes();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      fetchNotes(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const fetchLinks = async () => {
+      if (currentNote?._id) {
+        try {
+          const response = await api.get(`/notes/links/${currentNote._id}`);
+          setBacklinks(response.data.backlinks || []);
+        } catch (error) {
+          console.error('Error fetching links', error);
+        }
+      } else {
+        setBacklinks([]);
+      }
+    };
+    fetchLinks();
+  }, [currentNote]);
 
   const handleOpenEditor = (note = null) => {
     setCurrentNote(note);
@@ -64,18 +102,79 @@ const Notes = () => {
     }
   };
 
-  const filteredNotes = notes.filter(note => {
-      const query = searchQuery.toLowerCase();
-      return (
-          note.title.toLowerCase().includes(query) ||
-          note.content.toLowerCase().includes(query) ||
-          note.tags.some(tag => tag.toLowerCase().includes(query))
-      );
-  });
+  const handleWikiLinkClick = (title) => {
+    const linkedNote = notes.find(n => n.title.toLowerCase() === title.toLowerCase());
+    if (linkedNote) {
+        handleOpenEditor(linkedNote);
+    } else {
+        const createNew = window.confirm(`Note "${title}" does not exist. Create it?`);
+        if (createNew) {
+            handleOpenEditor({ title, content: '', tags: [], color: '#ffffff' });
+        }
+    }
+  };
+
+  const filteredNotes = notes;
+
+  const tagsList = useMemo(() => {
+    const counts = {};
+    notes.forEach(note => {
+      if (note.tags) {
+        note.tags.forEach(t => {
+          counts[t] = (counts[t] || 0) + 1;
+        });
+      }
+    });
+    return Object.entries(counts).sort((a,b) => b[1] - a[1]);
+  }, [notes]);
+
+  const getHeatmapColor = (level) => {
+    if (theme === 'dark') {
+      const darkColors = ['#2d333b', '#0e4429', '#006d32', '#26a641', '#39d353'];
+      return darkColors[level];
+    }
+    const lightColors = ['#ffffff', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
+    return lightColors[level];
+  };
+
+  const calendarData = useMemo(() => {
+    const counts = {};
+    notes.forEach(note => {
+      if(note.createdAt) {
+        const dateStr = new Date(note.createdAt).toISOString().split('T')[0];
+        counts[dateStr] = (counts[dateStr] || 0) + 1;
+      }
+    });
+
+    const data = [];
+    const today = new Date();
+    for (let i = 180; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      const count = counts[dateStr] || 0;
+      let level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 6 ? 3 : 4;
+      data.push({ date: dateStr, count, level, dateObj: new Date(d) });
+    }
+    
+    const monthsMap = new Map();
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    data.forEach(day => {
+       const monthKey = `${monthNames[day.dateObj.getMonth()]} ${day.dateObj.getFullYear()}`;
+       const monthName = monthNames[day.dateObj.getMonth()];
+       if (!monthsMap.has(monthKey)) {
+          monthsMap.set(monthKey, { name: monthName, key: monthKey, days: [] });
+       }
+       monthsMap.get(monthKey).days.push(day);
+    });
+    
+    return Array.from(monthsMap.values());
+  }, [notes]);
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="h-full flex flex-col space-y-6 overflow-hidden notes-container min-h-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Structured Notes</h1>
         
         <div className="flex items-center space-x-4 w-full sm:w-auto">
@@ -102,14 +201,57 @@ const Notes = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="flex-1 overflow-hidden flex flex-col lg:flex-row gap-6 min-h-0">
         
-        {/* Notes List / Sidebar within module */}
-        <div className={`lg:col-span-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-y-auto ${isEditorOpen ? 'hidden lg:block' : 'block'}`}>
-            <div className="sticky top-0 bg-white dark:bg-gray-800 p-4 border-b border-gray-100 dark:border-gray-700 z-10">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">All Notes ({filteredNotes.length})</h3>
+        <div className={`w-full lg:w-1/3 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col h-full overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 ${isEditorOpen ? 'hidden lg:flex' : 'flex'}`}>
+            <div className="bg-white dark:bg-gray-800 p-4 border-b border-gray-100 dark:border-gray-700 z-10 space-y-4 rounded-t-xl shrink-0">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tag Explorer</h3>
+                <div className="flex flex-wrap gap-2 max-h-[100px] overflow-y-auto pr-1">
+                    {tagsList.length > 0 ? tagsList.map(([tag, count]) => (
+                        <button 
+                            key={tag}
+                            onClick={() => setSearchQuery(tag)}
+                            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 dark:hover:bg-indigo-900/50 transition-colors border border-indigo-100 dark:border-indigo-800/30"
+                        >
+                            #{tag} <span className="ml-1 opacity-60 text-[10px] bg-indigo-200 dark:bg-indigo-800 px-1.5 rounded-full">{count}</span>
+                        </button>
+                    )) : <span className="text-sm text-gray-400">No tags used yet</span>}
+                </div>
+
+                <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Activity Heatmap</h3>
+                    <div className="w-full min-h-[120px] bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700 overflow-x-auto overflow-y-hidden">
+                        {calendarData && calendarData.length > 0 ? (
+                            <div className="flex gap-4 min-w-max">
+                              {calendarData.map((month) => (
+                                <div key={month.key} className="flex flex-col gap-1">
+                                  <span className="text-xs text-gray-500 mb-1">
+                                    {month.name}
+                                  </span>
+                                  <div className="grid grid-rows-7 grid-flow-col gap-1">
+                                    {month.days.map((day, idx) => (
+                                      <div
+                                        key={day.date + idx}
+                                        className="w-3 h-3 rounded-sm border border-gray-100 dark:border-gray-800"
+                                        style={{ backgroundColor: getHeatmapColor(day.level) }}
+                                        title={`${day.count} notes on ${day.date}`}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center h-full min-h-[120px] text-gray-400">Loading Activity...</div>
+                        )}
+                    </div>
+                </div>
             </div>
             
+            <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 shrink-0">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">All Notes ({filteredNotes.length})</h3>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-b-xl border-t border-gray-100 dark:border-gray-700">
             {loading ? (
                 <div className="p-8 text-center text-gray-500">Loading notes...</div>
             ) : filteredNotes.length === 0 ? (
@@ -122,10 +264,13 @@ const Notes = () => {
                         <li 
                            key={note._id} 
                            onClick={() => handleOpenEditor(note)}
-                           className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${currentNote?._id === note._id ? 'bg-indigo-50 border-l-4 border-indigo-500 dark:bg-indigo-900/20' : 'border-l-4 border-transparent'}`}
+                           style={{ backgroundColor: note.color || '#ffffff' }}
+                           className={`p-4 cursor-pointer hover:opacity-90 transition-opacity ${currentNote?._id === note._id ? 'border-l-4 border-indigo-500' : 'border-l-4 border-transparent'}`}
                         >
                             <h4 className="text-md font-semibold text-gray-900 dark:text-white truncate">{note.title}</h4>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{note.content}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                                {note.content.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\[\[(.*?)\]\]/g, ' 🔗 $1')}
+                            </p>
                             
                             {note.tags && note.tags.length > 0 && (
                                 <div className="mt-2 flex flex-wrap gap-1">
@@ -143,13 +288,14 @@ const Notes = () => {
                     ))}
                 </ul>
             )}
+            </div>
         </div>
 
         {/* Note Editor Area */}
-        <div className={`lg:col-span-2 overflow-y-auto ${!isEditorOpen ? 'hidden lg:block' : 'block'}`}>
+        <div className={`w-full lg:flex-1 h-full flex flex-col min-h-0 ${!isEditorOpen ? 'hidden lg:flex' : 'flex'}`}>
             {isEditorOpen ? (
-               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-                 <div className="flex justify-between items-center mb-6">
+               <div className="h-full bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 flex flex-col min-h-0 overflow-hidden">
+                 <div className="flex justify-between items-center mb-6 shrink-0">
                     <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                         {currentNote ? 'Edit Note' : 'Create New Note'}
                     </h2>
@@ -178,10 +324,31 @@ const Notes = () => {
                      defaultTitle={currentNote?.title}
                      defaultContent={currentNote?.content}
                      defaultTags={currentNote?.tags?.join(', ') || ''}
+                     defaultColor={currentNote?.color || '#ffffff'}
                      onSubmit={handleSaveNote}
                      onCancel={handleCloseEditor}
-                     isUpdate={!!currentNote}
+                     isUpdate={!!currentNote?._id}
+                     onWikiLinkClick={handleWikiLinkClick}
+                     allNotes={notes}
                  />
+                 
+                 {currentNote && backlinks.length > 0 && (
+                     <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-6">
+                         <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Referenced by:</h3>
+                         <div className="flex flex-wrap gap-2">
+                             {backlinks.map(link => (
+                                 <button 
+                                     key={link._id}
+                                     onClick={() => handleWikiLinkClick(link.sourceNoteId.title)}
+                                     className="py-1.5 px-3 rounded-full bg-gray-50 border border-gray-200 hover:bg-gray-100 dark:bg-gray-700/50 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors text-gray-700 dark:text-gray-300 font-medium text-xs flex items-center gap-2"
+                                 >
+                                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: link.sourceNoteId.color || '#ffffff' }}></span>
+                                     {link.sourceNoteId.title}
+                                 </button>
+                             ))}
+                         </div>
+                     </div>
+                 )}
                </div>
             ) : (
                 <div className="h-full bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center p-8 text-center">

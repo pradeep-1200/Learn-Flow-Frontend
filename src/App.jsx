@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 // Layout
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Pages
 import Login from './pages/Login';
@@ -13,6 +14,7 @@ import Dashboard from './pages/Dashboard';
 import Courses from './pages/Courses';
 import Tasks from './pages/Tasks';
 import Notes from './pages/Notes';
+import KnowledgeGraph from './pages/KnowledgeGraph';
 import Leetcode from './pages/Leetcode';
 import Syllabus from './pages/Syllabus';
 import Timetable from './pages/Timetable';
@@ -25,7 +27,7 @@ const MainLayout = ({ children }) => {
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Navbar />
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6">
+        <main className="flex-1 flex flex-col overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 min-h-0">
           {children}
         </main>
       </div>
@@ -64,7 +66,8 @@ function App() {
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
           <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
-          <Route path="/notes" element={<ProtectedRoute><Notes /></ProtectedRoute>} />
+          <Route path="/notes" element={<ProtectedRoute><ErrorBoundary><Notes /></ErrorBoundary></ProtectedRoute>} />
+          <Route path="/knowledge-graph" element={<ProtectedRoute><KnowledgeGraph /></ProtectedRoute>} />
           <Route path="/leetcode" element={<ProtectedRoute><Leetcode /></ProtectedRoute>} />
           <Route path="/syllabus" element={<ProtectedRoute><Syllabus /></ProtectedRoute>} />
           <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
