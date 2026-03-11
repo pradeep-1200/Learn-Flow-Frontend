@@ -18,6 +18,7 @@ const Sidebar = () => {
         <Link to="/timetable" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Timetable</Link>
         <Link to="/projects" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Projects</Link>
         <Link to="/analytics" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Analytics</Link>
+
       </nav>
     </div>
   );

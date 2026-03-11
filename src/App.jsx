@@ -20,6 +20,7 @@ import Syllabus from './pages/Syllabus';
 import Timetable from './pages/Timetable';
 import Projects from './pages/Projects';
 import Analytics from './pages/Analytics';
+import Profile from './pages/Profile';
 
 const MainLayout = ({ children }) => {
   return (
@@ -73,6 +74,7 @@ function App() {
           <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
           <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         </Routes>
       </Router>
     </AuthProvider>
