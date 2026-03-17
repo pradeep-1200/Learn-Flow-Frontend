@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
+import ProjectsSkeleton from '../components/skeletons/ProjectsSkeleton';
+import Skeleton from '../components/Skeleton';
 
 const GitHubIcon = () => (
   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -198,8 +200,24 @@ const Projects = () => {
             <button onClick={fetchGitHubRepos} className="text-xs text-indigo-600 hover:underline dark:text-indigo-400">Refresh</button>
           </div>
           {githubLoading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+            <div className="divide-y divide-gray-100 dark:divide-gray-700 fade-in">
+              {[...Array(4)].map((_, i) => (
+                  <div key={i} className="px-6 py-4 flex items-start justify-between gap-4">
+                    <div className="flex-1 space-y-3">
+                       <div className="flex gap-2 items-center">
+                          <Skeleton className="h-5 w-48" />
+                          <Skeleton className="h-4 w-16 rounded-full" />
+                       </div>
+                       <Skeleton className="h-4 w-3/4" />
+                       <div className="flex gap-4">
+                          <Skeleton className="h-3 w-12" />
+                          <Skeleton className="h-3 w-12" />
+                          <Skeleton className="h-3 w-24" />
+                       </div>
+                    </div>
+                    <Skeleton className="flex-shrink-0 h-8 w-28 rounded-md" />
+                  </div>
+              ))}
             </div>
           ) : githubError ? (
             <div className="p-6 text-center text-red-500 dark:text-red-400">{githubError}</div>
@@ -250,9 +268,7 @@ const Projects = () => {
       {/* Projects Grid */}
       {view === 'all' && (
         loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-          </div>
+          <ProjectsSkeleton />
         ) : projects.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <p className="text-gray-500 dark:text-gray-400">No projects yet. Create one or import from GitHub!</p>

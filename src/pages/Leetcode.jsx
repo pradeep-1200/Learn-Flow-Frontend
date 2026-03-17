@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveCont
 import api from '../services/api';
 import { Link } from 'react-router-dom';
 import LeetcodeHeatmap from '../components/LeetcodeHeatmap';
+import LeetcodeSkeleton from '../components/skeletons/LeetcodeSkeleton';
 
 const Leetcode = () => {
   const { user } = useAuth();
@@ -79,6 +80,8 @@ const Leetcode = () => {
     );
   }
 
+  if (loading) return <LeetcodeSkeleton />;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
@@ -93,11 +96,7 @@ const Leetcode = () => {
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-        </div>
-      ) : error ? (
+      {error ? (
         <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg text-center">
           {error}
         </div>
@@ -166,7 +165,7 @@ const Leetcode = () => {
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Submission Heatmap</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Last 365 days of activity</p>
             {profileData.calendar ? (
-               <LeetcodeHeatmap submissionCalendar={profileData.calendar} />
+               <LeetcodeHeatmap calendarData={profileData.calendar} />
             ) : (
                 <p className="text-gray-500 text-sm">No calendar data found.</p>
             )}

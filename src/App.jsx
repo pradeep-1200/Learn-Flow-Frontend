@@ -19,8 +19,8 @@ import Leetcode from './pages/Leetcode';
 import Syllabus from './pages/Syllabus';
 import Timetable from './pages/Timetable';
 import Projects from './pages/Projects';
-import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
+import Analytics from './pages/Analytics';
 
 const MainLayout = ({ children }) => {
   return (
@@ -65,15 +65,15 @@ function App() {
 
           {/* Protected Routes */}
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/courses" element={<ProtectedRoute><Courses /></ProtectedRoute>} />
           <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
           <Route path="/notes" element={<ProtectedRoute><ErrorBoundary><Notes /></ErrorBoundary></ProtectedRoute>} />
-          <Route path="/knowledge-graph" element={<ProtectedRoute><KnowledgeGraph /></ProtectedRoute>} />
+          <Route path="/knowledge-graph" element={<ProtectedRoute><Navigate to="/notes" /></ProtectedRoute>} />
           <Route path="/leetcode" element={<ProtectedRoute><Leetcode /></ProtectedRoute>} />
           <Route path="/syllabus" element={<ProtectedRoute><Syllabus /></ProtectedRoute>} />
           <Route path="/timetable" element={<ProtectedRoute><Timetable /></ProtectedRoute>} />
           <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
-          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         </Routes>
       </Router>

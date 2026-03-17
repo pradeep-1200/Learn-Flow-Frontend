@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import ProfileSkeleton from '../components/skeletons/ProfileSkeleton';
 
 const GitHubIcon = () => (
   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -96,6 +97,9 @@ const Profile = () => {
   const totalLeetcodeSolved = leetcodeStats
     ? (leetcodeStats.solved.easy + leetcodeStats.solved.medium + leetcodeStats.solved.hard)
     : 0;
+
+  const loading = githubLoading || leetcodeLoading;
+  if (loading) return <ProfileSkeleton />;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -197,8 +201,6 @@ const Profile = () => {
 
           {!user?.githubUsername ? (
             <div className="p-6 text-center text-gray-400 text-sm italic">Connect GitHub in Edit Profile</div>
-          ) : githubLoading ? (
-            <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div></div>
           ) : githubStats ? (
             <div className="p-5 space-y-4">
               {/* Profile avatar row */}
@@ -260,8 +262,6 @@ const Profile = () => {
 
           {!user?.leetcodeUsername ? (
             <div className="p-6 text-center text-gray-400 text-sm italic">Connect LeetCode in Edit Profile</div>
-          ) : leetcodeLoading ? (
-            <div className="flex justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500"></div></div>
           ) : leetcodeStats ? (
             <div className="p-5 space-y-4">
               {/* Total solved big number */}

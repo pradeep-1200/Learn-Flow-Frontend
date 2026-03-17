@@ -3,8 +3,11 @@ import { useLocation } from 'react-router-dom';
 import { ThemeContext } from '../context/ThemeContext';
 import api from '../services/api';
 import NoteEditor from '../components/NoteEditor';
+import KnowledgeGraph from './KnowledgeGraph';
+import NotesSkeleton from '../components/skeletons/NotesSkeleton';
 
 const Notes = () => {
+  const [activeTab, setActiveTab] = useState("notes");
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -136,48 +139,31 @@ const Notes = () => {
     const lightColors = ['#ffffff', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
     return lightColors[level];
   };
-
-  const calendarData = useMemo(() => {
-    const counts = {};
-    notes.forEach(note => {
-      if(note.createdAt) {
-        const dateStr = new Date(note.createdAt).toISOString().split('T')[0];
-        counts[dateStr] = (counts[dateStr] || 0) + 1;
-      }
-    });
-
-    const data = [];
-    const today = new Date();
-    for (let i = 180; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      const count = counts[dateStr] || 0;
-      let level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 6 ? 3 : 4;
-      data.push({ date: dateStr, count, level, dateObj: new Date(d) });
-    }
-    
-    const monthsMap = new Map();
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    
-    data.forEach(day => {
-       const monthKey = `${monthNames[day.dateObj.getMonth()]} ${day.dateObj.getFullYear()}`;
-       const monthName = monthNames[day.dateObj.getMonth()];
-       if (!monthsMap.has(monthKey)) {
-          monthsMap.set(monthKey, { name: monthName, key: monthKey, days: [] });
-       }
-       monthsMap.get(monthKey).days.push(day);
-    });
-    
-    return Array.from(monthsMap.values());
-  }, [notes]);
-
   return (
     <div className="h-full flex flex-col space-y-6 overflow-hidden notes-container min-h-0">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Structured Notes</h1>
-        
-        <div className="flex items-center space-x-4 w-full sm:w-auto">
+      <div className="flex gap-6 border-b mb-4">
+        <button
+          onClick={() => setActiveTab("notes")}
+          className={activeTab === "notes" ? "font-semibold border-b-2 border-indigo-500 pb-2 text-gray-900 dark:text-white" : "text-gray-500 pb-2"}
+        >
+          Notes
+        </button>
+        <button
+          onClick={() => setActiveTab("graph")}
+          className={activeTab === "graph" ? "font-semibold border-b-2 border-indigo-500 pb-2 text-gray-900 dark:text-white" : "text-gray-500 pb-2"}
+        >
+          Knowledge Graph
+        </button>
+      </div>
+
+      {activeTab === "notes" && (
+      <>
+        {loading ? (
+            <NotesSkeleton />
+        ) : (
+        <>
+        <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center gap-4 shrink-0">
+          <div className="flex items-center space-x-4 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
              <input 
                 type="text" 
@@ -217,44 +203,13 @@ const Notes = () => {
                         </button>
                     )) : <span className="text-sm text-gray-400">No tags used yet</span>}
                 </div>
-
-                <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Activity Heatmap</h3>
-                    <div className="w-full min-h-[120px] bg-gray-50 dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700 overflow-x-auto overflow-y-hidden">
-                        {calendarData && calendarData.length > 0 ? (
-                            <div className="flex gap-4 min-w-max">
-                              {calendarData.map((month) => (
-                                <div key={month.key} className="flex flex-col gap-1">
-                                  <span className="text-xs text-gray-500 mb-1">
-                                    {month.name}
-                                  </span>
-                                  <div className="grid grid-rows-7 grid-flow-col gap-1">
-                                    {month.days.map((day, idx) => (
-                                      <div
-                                        key={day.date + idx}
-                                        className="w-3 h-3 rounded-sm border border-gray-100 dark:border-gray-800"
-                                        style={{ backgroundColor: getHeatmapColor(day.level) }}
-                                        title={`${day.count} notes on ${day.date}`}
-                                      />
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center h-full min-h-[120px] text-gray-400">Loading Activity...</div>
-                        )}
-                    </div>
-                </div>
             </div>
             
             <div className="p-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 shrink-0">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">All Notes ({filteredNotes.length})</h3>
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-b-xl border-t border-gray-100 dark:border-gray-700">
-            {loading ? (
-                <div className="p-8 text-center text-gray-500">Loading notes...</div>
-            ) : filteredNotes.length === 0 ? (
+            {filteredNotes.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
                     No notes found. Create your first note!
                 </div>
@@ -363,6 +318,14 @@ const Notes = () => {
             )}
         </div>
       </div>
+      </>
+      )}
+      </>
+      )}
+
+      {activeTab === "graph" && (
+        <KnowledgeGraph />
+      )}
     </div>
   );
 };

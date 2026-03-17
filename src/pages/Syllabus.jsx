@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
+import SyllabusSkeleton from '../components/skeletons/SyllabusSkeleton';
 
 const Syllabus = () => {
   const [syllabi, setSyllabi] = useState([]);
@@ -24,6 +25,8 @@ const Syllabus = () => {
   useEffect(() => {
     fetchSyllabi();
   }, []);
+
+  if (loading) return <SyllabusSkeleton />;
 
   const handleOpenModal = () => {
     reset();
@@ -101,9 +104,7 @@ const Syllabus = () => {
         </button>
       </div>
 
-      {loading ? (
-        <p className="text-gray-500 dark:text-gray-400">Loading syllabus...</p>
-      ) : Object.keys(groupedSyllabi).length === 0 ? (
+      {Object.keys(groupedSyllabi).length === 0 ? (
         <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <p className="text-gray-500 dark:text-gray-400">No syllabus topics added yet. Map out your learning journey!</p>
         </div>

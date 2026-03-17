@@ -1,122 +1,157 @@
 import React, { useMemo } from 'react';
 
-const LeetcodeHeatmap = ({ submissionCalendar }) => {
-  const heatmapData = useMemo(() => {
-    if (!submissionCalendar) return [];
+const LeetcodeHeatmap = ({ calendarData }) => {
+  const { weeks, months } = useMemo(() => {
+    if (!calendarData) return { weeks: [], months: [] };
     
-    // The submissionCalendar is a JSON string or object mapping timestamps (seconds) to counts
+    // Parse JSON
+    let parsed = {};
+    try {
+      if (typeof calendarData === 'string') {
+        parsed = JSON.parse(calendarData);
+      } else {
+        parsed = calendarData;
+      }
+    } catch (e) {
+      console.error("Invalid calendarData", e);
+    }
+    
+    // Convert to Date mapping
     const activityMap = new Map();
-    
-    // Handle both string and parsed object
-    const calendarData = typeof submissionCalendar === 'string' 
-        ? JSON.parse(submissionCalendar || '{}') 
-        : submissionCalendar;
-
-    Object.entries(calendarData).forEach(([timestamp, count]) => {
-      // timestamp is in seconds, convert to milliseconds
-      const date = new Date(parseInt(timestamp) * 1000);
-      const dateString = date.toISOString().split('T')[0];
+    Object.entries(parsed).forEach(([timestamp, count]) => {
+      const ms = timestamp.length > 10 ? parseInt(timestamp) : parseInt(timestamp) * 1000;
+      const dateString = new Date(ms).toISOString().split('T')[0];
       activityMap.set(dateString, count);
     });
 
-    // Generate array for the last 365 days
-    const days = [];
+    const weeksArr = [];
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const startDate = new Date(today);
-    startDate.setDate(today.getDate() - 364); // past 1 year
+    const startDate = new Date();
+    startDate.setDate(today.getDate() - 364);
 
-    for (let d = new Date(startDate); d <= today; d.setDate(d.getDate() + 1)) {
-      const dateString = d.toISOString().split('T')[0];
-      days.push({
-        date: dateString,
-        count: activityMap.get(dateString) || 0
-      });
-    }
+    const startOffset = startDate.getDay(); // 0 = Sunday, 1 = Monday
+    const firstGridDate = new Date(startDate);
+    firstGridDate.setDate(startDate.getDate() - startOffset);
 
-    return days;
-  }, [submissionCalendar]);
-
-  const weeks = useMemo(() => {
-    const weeksArray = [];
-    if (heatmapData.length === 0) return weeksArray;
-
+    const monthLabels = [];
+    let currentMonth = -1;
     let currentWeek = [];
-    
-    // The first day's day-of-week determines where we start the first column
-    const startDayOfWeek = new Date(heatmapData[0].date).getDay();
-    
-    // Pad the start of the first week so Sunday starts at index 0
-    for (let i = 0; i < startDayOfWeek; i++) {
-        currentWeek.push(null);
+
+    for (let i = 0; i < 53 * 7; i++) {
+      const d = new Date(firstGridDate);
+      d.setDate(firstGridDate.getDate() + i);
+      
+      const dateString = d.toISOString().split('T')[0];
+      const colIndex = Math.floor(i / 7);
+      
+      // Month labels
+      if (d.getDate() <= 7 && d.getDay() === 0 && d.getMonth() !== currentMonth) {
+        currentMonth = d.getMonth();
+        const monthName = d.toLocaleString('default', { month: 'short' });
+        monthLabels.push({ name: monthName, colIndex });
+      }
+
+      let countValue = -1;
+      let empty = true;
+      if (d >= startDate && d <= today) {
+         countValue = activityMap.get(dateString) || 0;
+         empty = false;
+      }
+
+      currentWeek.push({
+         date: dateString,
+         count: countValue,
+         isEmpty: empty
+      });
+
+      if (currentWeek.length === 7) {
+         weeksArr.push(currentWeek);
+         currentWeek = [];
+      }
     }
 
-    heatmapData.forEach((dayData) => {
-        currentWeek.push(dayData);
-        if (currentWeek.length === 7) {
-            weeksArray.push(currentWeek);
-            currentWeek = [];
-        }
-    });
+    return { weeks: weeksArr, months: monthLabels };
+  }, [calendarData]);
 
-    // Pad the end of the last week if necessary
-    if (currentWeek.length > 0) {
-        while (currentWeek.length < 7) {
-            currentWeek.push(null);
-        }
-        weeksArray.push(currentWeek);
-    }
-    
-    return weeksArray;
-  }, [heatmapData]);
-
-  const getColorClass = (count) => {
-    if (count === 0) return 'bg-gray-100 dark:bg-gray-800'; // white/gray
-    if (count === 1) return 'bg-green-200 dark:bg-green-800'; // light green
-    if (count === 2) return 'bg-green-400 dark:bg-green-600'; // medium green
-    if (count >= 3) return 'bg-green-600 dark:bg-green-500'; // dark green
-    return 'bg-gray-100 dark:bg-gray-800';
+  const getColor = (count) => {
+    if (count < 0) return 'transparent';
+    if (count === 0) return '#ebedf0';
+    if (count === 1) return '#9be9a8';
+    if (count === 2) return '#40c463';
+    if (count === 3) return '#30a14e';
+    return '#216e39';
   };
-
-  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  
+  if (!weeks || weeks.length === 0) return null;
 
   return (
-    <div className="w-full overflow-x-auto pb-4">
-      <div className="flex min-w-max items-end">
-        {/* Day of week labels */}
-        <div className="flex flex-col gap-1 pr-2 pt-5">
-           {dayLabels.map((day, i) => (
-               <div key={day} className={`h-3 text-[10px] leading-[12px] text-gray-400 font-medium ${i % 2 === 0 ? 'invisible' : 'visible'}`}>
-                   {day}
+    <div className="w-full overflow-x-auto pb-4 pt-2">
+      <div className="min-w-max flex flex-col">
+        {/* Month labels */}
+        <div className="flex h-6 text-xs text-gray-500 mb-1 ml-8 relative">
+           {weeks.map((_, i) => {
+             const month = months.find(m => m.colIndex === i);
+             const isNewMonth = !!month;
+             // Calculate the margin matching the weeks gap below
+             const marginLeft = i === 0 ? '0' : (isNewMonth ? '12px' : '3px');
+             return (
+               <div key={`ml-${i}`} style={{ width: '12px', marginLeft, position: 'relative' }}>
+                 {month && (
+                    <span className="absolute top-0 left-0">{month.name}</span>
+                 )}
                </div>
-           ))}
+             );
+           })}
         </div>
         
-        {/* Grid */}
-        <div className="flex gap-1 pt-5">
-          {weeks.map((week, wIndex) => (
-            <div key={wIndex} className="flex flex-col gap-1">
-              {week.map((day, dIndex) => (
-                <div 
-                  key={`${wIndex}-${dIndex}`}
-                  className={`w-3 h-3 rounded-sm transition-colors duration-200 ${day ? getColorClass(day.count) : 'bg-transparent'}`}
-                  title={day ? `${day.count} submissions on ${day.date}` : ''}
-                ></div>
-              ))}
+        <div className="flex">
+            {/* Day labels */}
+            <div className="flex flex-col gap-[3px] pr-2 text-[10px] text-gray-400 font-medium w-8 justify-around pt-[2px]">
+              <div className="h-[14px]"></div>
+              <div className="h-[14px] leading-[14px]">Mon</div>
+              <div className="h-[14px]"></div>
+              <div className="h-[14px] leading-[14px]">Wed</div>
+              <div className="h-[14px]"></div>
+              <div className="h-[14px] leading-[14px]">Fri</div>
+              <div className="h-[14px]"></div>
             </div>
-          ))}
+
+            {/* Grid */}
+            <div className="flex">
+              {weeks.map((week, i) => {
+                const isNewMonth = months.some(m => m.colIndex === i);
+                const marginLeft = i === 0 ? '0' : (isNewMonth ? '12px' : '3px');
+                
+                return (
+                  <div 
+                    key={i} 
+                    className="flex flex-col gap-[3px]"
+                    style={{ marginLeft }}
+                  >
+                    {week.map((day, j) => (
+                      <div 
+                        key={j}
+                        className="w-[12px] h-[12px] rounded-sm"
+                        style={{ backgroundColor: getColor(day.count) }}
+                        title={day.isEmpty ? '' : `${day.count} submissions on ${day.date}`}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
         </div>
       </div>
       
       {/* Legend */}
-      <div className="flex justify-end items-center space-x-2 mt-4 text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex justify-end items-center space-x-2 mt-4 text-xs text-gray-500">
         <span>Less</span>
-        <div className="flex gap-1">
-          <div className="w-3 h-3 rounded-sm bg-gray-100 dark:bg-gray-800"></div>
-          <div className="w-3 h-3 rounded-sm bg-green-200 dark:bg-green-800"></div>
-          <div className="w-3 h-3 rounded-sm bg-green-400 dark:bg-green-600"></div>
-          <div className="w-3 h-3 rounded-sm bg-green-600 dark:bg-green-500"></div>
+        <div className="flex gap-[3px]">
+          <div className="w-[12px] h-[12px] rounded-sm" style={{ backgroundColor: '#ebedf0' }} />
+          <div className="w-[12px] h-[12px] rounded-sm" style={{ backgroundColor: '#9be9a8' }} />
+          <div className="w-[12px] h-[12px] rounded-sm" style={{ backgroundColor: '#40c463' }} />
+          <div className="w-[12px] h-[12px] rounded-sm" style={{ backgroundColor: '#30a14e' }} />
+          <div className="w-[12px] h-[12px] rounded-sm" style={{ backgroundColor: '#216e39' }} />
         </div>
         <span>More</span>
       </div>

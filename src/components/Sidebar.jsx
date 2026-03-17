@@ -12,13 +12,10 @@ const Sidebar = () => {
         <Link to="/courses" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Courses</Link>
         <Link to="/tasks" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Tasks</Link>
         <Link to="/notes" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Notes</Link>
-        <Link to="/knowledge-graph" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Knowledge Graph</Link>
         <Link to="/leetcode" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">LeetCode</Link>
         <Link to="/syllabus" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Syllabus</Link>
         <Link to="/timetable" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Timetable</Link>
         <Link to="/projects" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Projects</Link>
-        <Link to="/analytics" className="block py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700">Analytics</Link>
-
       </nav>
     </div>
   );

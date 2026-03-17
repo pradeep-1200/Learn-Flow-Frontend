@@ -8,12 +8,10 @@ const pageTitles = {
     '/courses': 'Courses',
     '/tasks': 'Tasks',
     '/notes': 'Notes',
-    '/knowledge-graph': 'Knowledge Graph',
     '/leetcode': 'LeetCode',
     '/syllabus': 'Syllabus',
     '/timetable': 'Timetable',
     '/projects': 'Projects',
-    '/analytics': 'Analytics',
     '/profile': 'Profile',
 };
 

@@ -16,14 +16,14 @@ const KnowledgeGraph = () => {
             const formattedNodes = response.data.nodes.map((n, i) => ({
                 id: n.id,
                 position: n.position || { x: (i * 100) % 500, y: (i * 100) % 500 },
-                data: { label: n.data.label },
+                data: { label: n.data.label, type: n.data.type },
                 style: { 
                     backgroundColor: n.data.color || '#ffffff', 
                     border: '1px solid #cbd5e1', 
                     padding: '10px 20px', 
                     borderRadius: '8px',
                     fontWeight: '500',
-                    color: '#334155'
+                    color: n.data.type === 'course' ? '#ffffff' : '#334155'
                 }
             }));
             const formattedEdges = response.data.edges.map(e => ({
@@ -71,7 +71,13 @@ const KnowledgeGraph = () => {
                     edges={edges} 
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
-                    onNodeClick={(event, node) => navigate(`/notes?note=${encodeURIComponent(node.data.label)}`)}
+                    onNodeClick={(event, node) => {
+                        if (node.data.type === 'course') {
+                            navigate('/courses');
+                        } else {
+                            navigate(`/notes?note=${encodeURIComponent(node.data.label)}`);
+                        }
+                    }}
                     fitView
                     attributionPosition="bottom-right"
                 >
